@@ -16,9 +16,17 @@ type AggregatedMetric struct {
 type Values struct {
 	Count int64
 	Sum   float64
+	Min   float64
+	Max   float64
 }
 
 func (am *AggregatedMetric) Add(value float64) {
 	am.Values.Count++
 	am.Values.Sum += value
+	if value < am.Values.Min {
+		am.Values.Min = value
+	}
+	if value > am.Values.Max {
+		am.Values.Max = value
+	}
 }

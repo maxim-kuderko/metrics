@@ -39,7 +39,7 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 	name := `name`
 	v := 0.1
 	b.ResetTimer()
-	concurrency := 8
+	concurrency := 4
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
 	arr := randArr()
