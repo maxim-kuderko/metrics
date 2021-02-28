@@ -1,8 +1,10 @@
 package metrics
 
 import (
+	"github.com/cespare/xxhash"
 	"github.com/maxim-kuderko/metrics/drivers"
 	"github.com/maxim-kuderko/metrics/entities"
+	"github.com/valyala/bytebufferpool"
 	"runtime"
 	"sync"
 	"time"
@@ -11,27 +13,20 @@ import (
 type Reporter struct {
 	driver Driver
 
-	buff                buffer
-	buffSize            int
-	bufferFlushTicker   *time.Ticker
-	flushTickerDuration time.Duration
+	buff              []entities.Metrics
+	bufferFlushTicker *time.Ticker
 
-	mu             sync.Mutex
+	mu             []*sync.Mutex
 	idx            int
 	flushSemaphore chan struct{}
 	wg             sync.WaitGroup
 }
 
-type buffer struct {
-	entities.Metrics
-	CreatedAt time.Time
-}
-
 type Option func(r *Reporter)
 
-var defaultConfigs = []Option{WithDriver(drivers.NewStdout()), WithBuffer(100), WithFlushTicker(time.Second)}
+var defaultConfigs = []Option{WithDriver(drivers.NewStdout()), WithFlushTicker(time.Second), WithConcurrency(runtime.NumCPU() * 2)}
 
-var metricsPool sync.Pool
+var metricsPool = sync.Pool{New: newBuff()}
 
 func NewReporter(opt ...Option) *Reporter {
 	m := &Reporter{}
@@ -41,63 +36,75 @@ func NewReporter(opt ...Option) *Reporter {
 	for _, o := range opt {
 		o(m)
 	}
-	metricsPool = sync.Pool{New: newBuff(m.buffSize)}
-	m.buff = metricsPool.Get().(buffer)
-	m.flushSemaphore = make(chan struct{}, runtime.GOMAXPROCS(0))
 	return m
 }
 
 func (r *Reporter) flusher() {
 	for {
 		<-r.bufferFlushTicker.C
-		r.mu.Lock()
-		r.flush()
-		r.mu.Unlock()
+		for i, mu := range r.mu {
+			mu.Lock()
+			r.flush(i)
+			mu.Unlock()
+		}
+
 	}
 }
 
-func newBuff(size int) func() interface{} {
+func newBuff() func() interface{} {
 	return func() interface{} {
-		return buffer{
-			Metrics:   make(entities.Metrics, size),
-			CreatedAt: time.Now(),
-		}
+		return entities.Metrics{}
 	}
 }
 
 func (r *Reporter) Send(name string, value float64, tags ...string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	m := r.buff.Metrics[r.idx]
-	m.Value = value
-	m.Name = name
-	m.Tags = tags
-	r.buff.Metrics[r.idx] = m
-	r.idx++
-	if r.idx >= r.buffSize-1 {
-		r.flush()
+	h := calcHash(name, tags...)
+	shard := h % uint64(len(r.mu))
+	r.mu[shard].Lock()
+	defer r.mu[shard].Unlock()
+	v, ok := r.buff[shard][h]
+	if !ok {
+		tmp := &entities.AggregatedMetric{
+			Name:   name,
+			Tags:   tags,
+			Values: entities.Values{},
+		}
+		r.buff[shard][h] = tmp
+		v = tmp
 	}
+	v.Add(value)
+}
+
+func calcHash(name string, tags ...string) uint64 {
+	b := bytebufferpool.Get()
+	defer bytebufferpool.Put(b)
+	b.WriteString(name)
+	for _, s := range tags {
+		b.WriteString(s)
+	}
+	return xxhash.Sum64(b.Bytes())
 }
 func (r *Reporter) Close() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.flush()
+	for i, mu := range r.mu {
+		mu.Lock()
+		r.flush(i)
+		mu.Unlock()
+	}
 	r.wg.Wait()
 }
 
-func (r *Reporter) flush() {
-	tmp := r.buff
-	tmp.Metrics = tmp.Metrics[:r.idx]
-	r.buff = metricsPool.Get().(buffer)
-	r.buff.CreatedAt = time.Now()
-	r.idx = 0
-	r.flushSemaphore <- struct{}{}
-	r.bufferFlushTicker.Reset(r.flushTickerDuration)
+func (r *Reporter) flush(i int) {
 	r.wg.Add(1)
+	tmp := r.buff[i]
+	r.buff[i] = metricsPool.Get().(entities.Metrics)
+	r.flushSemaphore <- struct{}{}
 	go func() {
-		defer r.wg.Done()
-		<-r.flushSemaphore
-		r.driver.Send(tmp.Metrics)
-		metricsPool.Put(tmp)
+		defer func() {
+			tmp.Reset()
+			metricsPool.Put(tmp)
+			r.wg.Done()
+			<-r.flushSemaphore
+		}()
+		r.driver.Send(tmp)
 	}()
 }
