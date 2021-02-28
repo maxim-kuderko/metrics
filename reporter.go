@@ -24,7 +24,7 @@ type Reporter struct {
 
 type Option func(r *Reporter)
 
-var defaultConfigs = []Option{WithDriver(drivers.NewStdout()), WithFlushTicker(time.Second), WithConcurrency(runtime.NumCPU() * 2)}
+var defaultConfigs = []Option{WithDriver(drivers.NewStdout()), WithFlushTicker(time.Second), WithConcurrency(runtime.NumCPU() * 4)}
 
 var metricsPool = sync.Pool{New: newBuff()}
 

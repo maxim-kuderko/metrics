@@ -38,16 +38,25 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 	r := NewReporter(WithDriver(drivers.NewNoop()))
 	name := `name`
 	v := 0.1
-	b.ResetTimer()
-	concurrency := 4
+	concurrency := 32
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
-	arr := randArr()
+	count := 100000
+	tagsAr := make([][]string, 0, 1000)
+	for i := 0; i < count; i++ {
+		tagsA := randArr()
+		k := ``
+		for _, v := range tagsA {
+			k += v
+		}
+		tagsAr = append(tagsAr, tagsA)
+	}
+	b.ResetTimer()
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < b.N/concurrency; i++ {
-				r.Send(name, v, arr...)
+				r.Send(name, v, tagsAr[i%len(tagsAr)]...)
 			}
 		}()
 	}
@@ -138,14 +147,22 @@ func TestReporter_SendC(t *testing.T) {
 	count := 10000000 * concurrency
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
-	arr := randArr()
 	name := `name`
 	v := 1.0
+	tagsAr := make([][]string, 0, 1000)
+	for i := 0; i < 1000; i++ {
+		tagsA := randArr()
+		k := ``
+		for _, v := range tagsA {
+			k += v
+		}
+		tagsAr = append(tagsAr, tagsA)
+	}
 	for i := 0; i < concurrency; i++ {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < count/concurrency; i++ {
-				r.Send(name, v, arr...)
+				r.Send(name, v, tagsAr[i%len(tagsAr)]...)
 			}
 		}()
 	}
