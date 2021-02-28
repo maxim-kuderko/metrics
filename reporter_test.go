@@ -2,8 +2,11 @@ package metrics
 
 import (
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/maxim-kuderko/metrics/drivers"
+	"github.com/maxim-kuderko/metrics/entities"
 	"math/rand"
+	"net"
 	"reflect"
 	"sync"
 	"testing"
@@ -12,13 +15,17 @@ import (
 
 func BenchmarkReporter_Send(b *testing.B) {
 	b.ReportAllocs()
-	r := NewReporter(WithDriver(drivers.NewNoop()))
+	r := NewReporter(WithDriver(drivers.NewNoop()), WithConcurrency(2))
 	name := `name`
 	v := 1.0
+
+	tagsAr := make([][]string, 0, 1000)
+	for i := 0; i < 100; i++ {
+		tagsAr = append(tagsAr, randArr())
+	}
 	b.ResetTimer()
-	tArr := randArr()
 	for i := 0; i < b.N; i++ {
-		r.Send(name, v, tArr...)
+		r.Send(name, v, tagsAr[i%len(tagsAr)]...)
 	}
 }
 
@@ -41,15 +48,9 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 	concurrency := 32
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
-	count := 100000
 	tagsAr := make([][]string, 0, 1000)
-	for i := 0; i < count; i++ {
-		tagsA := randArr()
-		k := ``
-		for _, v := range tagsA {
-			k += v
-		}
-		tagsAr = append(tagsAr, tagsA)
+	for i := 0; i < 100; i++ {
+		tagsAr = append(tagsAr, randArr())
 	}
 	b.ResetTimer()
 	for i := 0; i < concurrency; i++ {
@@ -176,6 +177,64 @@ func TestReporter_SendC(t *testing.T) {
 	if int(c) != count {
 		t.Fatalf(`expecting %v, got %v`, count, c)
 	}
+}
+
+func TestReporter_Send_UDP(t *testing.T) {
+	count := 100000
+	addr := `127.0.0.1:9999`
+	addrS := net.UDPAddr{
+		Port: 9999,
+		IP:   net.ParseIP("127.0.0.1"),
+	}
+	ln, _ := net.ListenUDP(`udp`, &addrS)
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	c := int64(0)
+	go func() {
+		defer wg.Done()
+		buff := make([]byte, 65000)
+		ln.SetReadBuffer(65000)
+		for {
+			n, err := ln.Read(buff)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			tmp := entities.AggregatedMetric{}
+			if err := jsoniter.ConfigFastest.Unmarshal(buff[:n], &tmp); err != nil {
+				fmt.Println(err)
+				continue
+			}
+			c += tmp.Values.Count
+			if c == int64(count) {
+				break
+			} else {
+				t.Fatalf("got %d expexted %d", c, count)
+			}
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		udp, _ := drivers.NewUDP(addr)
+		r := NewReporter(WithDriver(udp), WithConcurrency(1), WithFlushTicker(time.Minute))
+		for i := 0; i < count; i++ {
+			r.Send(`name`, 1)
+		}
+		r.Close()
+	}()
+	wg.Wait()
+}
+
+func BenchmarkReporter_Send_UDP(b *testing.B) {
+	b.ReportAllocs()
+	addr := `127.0.0.1:9999`
+	udp, _ := drivers.NewUDP(addr)
+	r := NewReporter(WithDriver(udp), WithConcurrency(1), WithFlushTicker(time.Second))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.Send(`name`, 1)
+	}
+	r.Close()
 }
 
 func init() {

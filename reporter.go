@@ -36,6 +36,7 @@ func NewReporter(opt ...Option) *Reporter {
 	for _, o := range opt {
 		o(m)
 	}
+	go m.flusher()
 	return m
 }
 

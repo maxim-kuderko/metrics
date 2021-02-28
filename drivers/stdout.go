@@ -9,9 +9,7 @@ type Stdout struct {
 }
 
 func (s Stdout) Send(metrics entities.Metrics) {
-	for _, m := range metrics {
-		fmt.Println(m)
-	}
+	fmt.Println(metrics)
 }
 
 func NewStdout() *Stdout {
