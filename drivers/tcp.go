@@ -11,7 +11,6 @@ import (
 type TCP struct {
 	conn net.Conn
 	mu   sync.Mutex
-	C    int
 }
 
 func (s *TCP) Send(metrics entities.Metrics) {
@@ -32,7 +31,6 @@ func (s *TCP) Send(metrics entities.Metrics) {
 func (s *TCP) flush(buffer *bytebufferpool.ByteBuffer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.C++
 	buffer.WriteTo(s.conn)
 }
 
