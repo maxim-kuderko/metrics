@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -110,7 +111,7 @@ func TestReporter_Send(t *testing.T) {
 func TestReporter_Send_Small(t *testing.T) {
 	stu := drivers.NewTestStub()
 	r := NewReporter(WithDriver(stu))
-	count := 200
+	count := 2000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
 		tagsA := randArr()
@@ -180,7 +181,7 @@ func TestReporter_SendC(t *testing.T) {
 }
 
 func TestReporter_Send_UDP(t *testing.T) {
-	count := 100000
+	count := 10000000
 	addr := `127.0.0.1:9999`
 	addrS := net.UDPAddr{
 		Port: 9999,
@@ -190,37 +191,112 @@ func TestReporter_Send_UDP(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	c := int64(0)
+
 	go func() {
 		defer wg.Done()
-		buff := make([]byte, 65000)
-		ln.SetReadBuffer(65000)
+		buff := make([]byte, 1<<20)
 		for {
+			ln.SetReadBuffer(1 << 20)
+			ln.SetReadDeadline(time.Now().Add(time.Second))
 			n, err := ln.Read(buff)
 			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-			tmp := entities.AggregatedMetric{}
-			if err := jsoniter.ConfigFastest.Unmarshal(buff[:n], &tmp); err != nil {
-				fmt.Println(err)
-				continue
-			}
-			c += tmp.Values.Count
-			if c == int64(count) {
+				if c != int64(count) {
+					t.Fatalf("got %d expexted %d", c, count)
+				}
 				break
-			} else {
-				t.Fatalf("got %d expexted %d", c, count)
+			}
+			s := strings.Split(string(buff[:n]), "\n")
+			for _, d := range s {
+				if len(d) == 0 {
+					continue
+				}
+				tmp := entities.AggregatedMetric{}
+				if err := jsoniter.ConfigFastest.Unmarshal([]byte(d), &tmp); err != nil {
+					fmt.Println(err)
+					continue
+				}
+				c += tmp.Values.Count
 			}
 		}
 	}()
 	go func() {
 		defer wg.Done()
 		udp, _ := drivers.NewUDP(addr)
-		r := NewReporter(WithDriver(udp), WithConcurrency(1), WithFlushTicker(time.Minute))
-		for i := 0; i < count; i++ {
-			r.Send(`name`, 1)
+		cardinality := 1000
+		r := NewReporter(WithDriver(udp), WithConcurrency(8), WithFlushTicker(time.Millisecond*10))
+		tagsAr := make([][]string, 0, cardinality)
+		for i := 0; i < cardinality; i++ {
+			tagsAr = append(tagsAr, randArr())
 		}
+		for i := 0; i < count; i++ {
+			r.Send(`name`, 1, tagsAr[i%cardinality]...)
+		}
+		fmt.Println(`closing`)
 		r.Close()
+		fmt.Println(udp.C)
+	}()
+	wg.Wait()
+}
+
+func TestReporter_Send_TCP(t *testing.T) {
+	count := 1000000
+	addr := `127.0.0.1:9999`
+	addrS := net.TCPAddr{
+		Port: 9999,
+		IP:   net.ParseIP("127.0.0.1"),
+	}
+	ln, _ := net.ListenTCP(`tcp`, &addrS)
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	c := int64(0)
+
+	go func() {
+		defer wg.Done()
+		buff := make([]byte, 1<<20)
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				t.Error(err)
+			}
+			for {
+				conn.SetReadDeadline(time.Now().Add(time.Second))
+				n, err := conn.Read(buff)
+				if err != nil {
+					if c != int64(count) {
+						t.Fatalf("got %d expexted %d", c, count)
+					}
+					return
+				}
+				s := strings.Split(string(buff[:n]), "\n")
+				for _, d := range s {
+					if len(d) == 0 {
+						continue
+					}
+					tmp := entities.AggregatedMetric{}
+					if err := jsoniter.ConfigFastest.Unmarshal([]byte(d), &tmp); err != nil {
+						fmt.Println(err)
+						continue
+					}
+					c += tmp.Values.Count
+				}
+			}
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		udp, _ := drivers.NewTCP(addr)
+		cardinality := 1000
+		r := NewReporter(WithDriver(udp), WithConcurrency(8), WithFlushTicker(time.Millisecond*10))
+		tagsAr := make([][]string, 0, cardinality)
+		for i := 0; i < cardinality; i++ {
+			tagsAr = append(tagsAr, randArr())
+		}
+		for i := 0; i < count; i++ {
+			r.Send(`name`, 1, tagsAr[i%cardinality]...)
+		}
+		fmt.Println(`closing`)
+		r.Close()
+		fmt.Println(udp.C)
 	}()
 	wg.Wait()
 }

@@ -8,21 +8,19 @@ import (
 	"sync"
 )
 
-type UDP struct {
+type TCP struct {
 	conn net.Conn
 	mu   sync.Mutex
 	C    int
 }
 
-const udpBufferSize = 6500
-
-func (s *UDP) Send(metrics entities.Metrics) {
+func (s *TCP) Send(metrics entities.Metrics) {
 	b := bytebufferpool.Get()
 	defer bytebufferpool.Put(b)
 	enc := jsoniter.ConfigFastest.NewEncoder(b)
 	for _, m := range metrics {
 		enc.Encode(m)
-		if b.Len() > udpBufferSize {
+		if b.Len() > udpBufferSize/4 {
 			s.flush(b)
 			b.Reset()
 		}
@@ -31,16 +29,16 @@ func (s *UDP) Send(metrics entities.Metrics) {
 		s.flush(b)
 	}
 }
-func (s *UDP) flush(buffer *bytebufferpool.ByteBuffer) {
+func (s *TCP) flush(buffer *bytebufferpool.ByteBuffer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.C++
 	buffer.WriteTo(s.conn)
 }
 
-func NewUDP(addr string) (*UDP, error) {
-	c, err := net.Dial(`udp`, addr)
-	return &UDP{
+func NewTCP(addr string) (*TCP, error) {
+	c, err := net.Dial(`tcp`, addr)
+	return &TCP{
 		conn: c,
 	}, err
 }

@@ -9,15 +9,15 @@ func (m Metrics) Reset() {
 }
 
 type AggregatedMetric struct {
-	Name   string
-	Values Values
-	Tags   []string
+	Name   string   `json:"name"`
+	Values Values   `json:"values"`
+	Tags   []string `json:"tags"`
 }
 type Values struct {
-	Count int64
-	Sum   float64
-	Min   float64
-	Max   float64
+	Count int64   `json:"count"`
+	Sum   float64 `json:"sum"`
+	Min   float64 `json:"min"`
+	Max   float64 `json:"max"`
 }
 
 func (am *AggregatedMetric) Add(value float64) {
