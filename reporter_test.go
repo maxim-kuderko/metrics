@@ -35,7 +35,7 @@ func randArr() []string {
 
 func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 	b.ReportAllocs()
-	r := NewReporter(WithDriver(drivers.NewNoop()), WithBuffer(500))
+	r := NewReporter(WithDriver(drivers.NewNoop()), WithBuffer(100))
 	name := `name`
 	v := 0.1
 	b.ResetTimer()
@@ -57,7 +57,7 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 func TestReporter_Send(t *testing.T) {
 	stu := drivers.NewTestStub()
 	r := NewReporter(WithDriver(stu), WithBuffer(500))
-	count := 1000
+	count := 1000000
 	tagsAr := make([][]string, 0, count)
 	for i := 0; i < count; i++ {
 		tagsA := randArr()

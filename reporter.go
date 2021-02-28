@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"github.com/maxim-kuderko/metrics/drivers"
+	"github.com/maxim-kuderko/metrics/entities"
 	"runtime"
 	"sync"
 	"time"
@@ -22,7 +23,7 @@ type Reporter struct {
 }
 
 type buffer struct {
-	drivers.Metrics
+	entities.Metrics
 	CreatedAt time.Time
 }
 
@@ -58,7 +59,7 @@ func (r *Reporter) flusher() {
 func newBuff(size int) func() interface{} {
 	return func() interface{} {
 		return buffer{
-			Metrics:   make(drivers.Metrics, size),
+			Metrics:   make(entities.Metrics, size),
 			CreatedAt: time.Now(),
 		}
 	}

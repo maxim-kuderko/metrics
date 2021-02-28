@@ -1,7 +1,9 @@
 package metrics
 
-import "github.com/maxim-kuderko/metrics/drivers"
+import (
+	"github.com/maxim-kuderko/metrics/entities"
+)
 
 type Driver interface {
-	Send(metrics drivers.Metrics)
+	Send(metrics entities.Metrics)
 }
