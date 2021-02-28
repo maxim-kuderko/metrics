@@ -233,7 +233,6 @@ func TestReporter_Send_UDP(t *testing.T) {
 		}
 		fmt.Println(`closing`)
 		r.Close()
-		fmt.Println(udp.C)
 	}()
 	wg.Wait()
 }
