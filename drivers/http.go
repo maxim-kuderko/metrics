@@ -3,6 +3,7 @@ package drivers
 import (
 	"bytes"
 	"fmt"
+	"github.com/golang/snappy"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/maxim-kuderko/metrics/entities"
 	"io"
@@ -21,9 +22,11 @@ var bytesBuffer = sync.Pool{New: func() interface{} { return bytes.NewBuffer(nil
 
 func (s *HTTP) Send(metrics entities.Metrics) {
 	r, w := io.Pipe()
-	enc := jsoniter.ConfigFastest.NewEncoder(w)
+	sn := snappy.NewBufferedWriter(w)
+	enc := jsoniter.ConfigFastest.NewEncoder(sn)
 	go func() {
 		defer func() {
+			sn.Close()
 			w.Close()
 		}()
 		for _, m := range metrics {

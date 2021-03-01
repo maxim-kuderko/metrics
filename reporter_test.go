@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"fmt"
+	"github.com/golang/snappy"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/maxim-kuderko/metrics/drivers"
 	"github.com/maxim-kuderko/metrics/entities"
@@ -240,7 +241,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 }
 
 func TestReporter_Send_HTTP(t *testing.T) {
-	count := 1000000
+	count := 10000
 	port := `9999`
 	addr := fmt.Sprintf(`http://127.0.0.1:%s/send`, port)
 
@@ -250,7 +251,7 @@ func TestReporter_Send_HTTP(t *testing.T) {
 	go func() {
 		http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
-			b, _ := ioutil.ReadAll(r.Body)
+			b, _ := ioutil.ReadAll(snappy.NewReader(r.Body))
 			defer r.Body.Close()
 			s := strings.Split(string(b), "\n")
 			for _, d := range s {
@@ -283,7 +284,7 @@ func TestReporter_Send_HTTP(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		ht := drivers.NewHTTP(addr, time.Second)
-		cardinality := 10000
+		cardinality := 100
 		r := NewReporter(WithDriver(ht), WithConcurrency(8), WithFlushTicker(time.Millisecond*10))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
