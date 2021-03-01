@@ -146,13 +146,13 @@ func TestReporter_SendC(t *testing.T) {
 	stu := drivers.NewTestStub()
 	concurrency := 8
 	r := NewReporter(WithDriver(stu))
-	count := 10000000 * concurrency
+	count := 100000 * concurrency
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
 	name := `name`
 	v := 1.0
-	tagsAr := make([][]string, 0, 10000)
-	for i := 0; i < 10000; i++ {
+	tagsAr := make([][]string, 0, 100)
+	for i := 0; i < 100; i++ {
 		tagsA := randArr()
 		k := ``
 		for _, v := range tagsA {
@@ -181,7 +181,7 @@ func TestReporter_SendC(t *testing.T) {
 }
 
 func TestReporter_Send_UDP(t *testing.T) {
-	count := 10000000
+	count := 100000
 	addr := `127.0.0.1:9999`
 	addrS := net.UDPAddr{
 		Port: 9999,
@@ -197,7 +197,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 		buff := make([]byte, 1<<20)
 		for {
 			ln.SetReadBuffer(1 << 20)
-			ln.SetReadDeadline(time.Now().Add(time.Second))
+			ln.SetReadDeadline(time.Now().Add(time.Second * 5))
 			n, err := ln.Read(buff)
 			if err != nil {
 				if c != int64(count) {
@@ -223,7 +223,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 		defer wg.Done()
 		udp, _ := drivers.NewUDP(addr)
 		cardinality := 1000
-		r := NewReporter(WithDriver(udp), WithConcurrency(8), WithFlushTicker(time.Millisecond*10))
+		r := NewReporter(WithDriver(udp), WithConcurrency(8))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
 			tagsAr = append(tagsAr, randArr())
@@ -237,7 +237,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 }
 
 func TestReporter_Send_TCP(t *testing.T) {
-	count := 1000000
+	count := 10000
 	addr := `127.0.0.1:9999`
 	addrS := net.TCPAddr{
 		Port: 9999,
