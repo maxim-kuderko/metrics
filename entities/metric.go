@@ -13,6 +13,7 @@ type AggregatedMetric struct {
 	Values Values   `json:"values"`
 	Tags   []string `json:"tags"`
 	Hash   uint64   `json:"hash"`
+	Time   int64    `json:"ts"`
 }
 type Values struct {
 	Count int64   `json:"count"`
