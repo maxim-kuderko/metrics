@@ -25,16 +25,15 @@ func (s *HTTP) Send(metrics entities.Metrics) {
 	r, w := io.Pipe()
 	sn := snappy.NewBufferedWriter(w)
 	enc := jsoniter.ConfigFastest.NewEncoder(sn)
-	go func() {
-		defer func() {
-			sn.Close()
-			w.Close()
-		}()
-		for _, m := range metrics {
-			enc.Encode(m)
-		}
+	go s.flush(r)
+	defer func() {
+		sn.Close()
+		w.Close()
 	}()
-	s.flush(r)
+	for _, m := range metrics {
+		enc.Encode(m)
+	}
+
 }
 func (s *HTTP) flush(buffer io.Reader) {
 	resp, err := http.Post(s.addr, ``, buffer)
