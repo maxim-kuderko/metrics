@@ -31,3 +31,14 @@ func (am *AggregatedMetric) Add(value float64) {
 		am.Values.Max = value
 	}
 }
+
+func (am *AggregatedMetric) Merge(new *AggregatedMetric) {
+	am.Values.Count += new.Values.Count
+	am.Values.Sum += new.Values.Sum
+	if new.Values.Min < am.Values.Min {
+		am.Values.Min = new.Values.Min
+	}
+	if new.Values.Max > am.Values.Max {
+		am.Values.Max = new.Values.Max
+	}
+}
