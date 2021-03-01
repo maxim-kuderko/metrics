@@ -19,7 +19,9 @@ type Reporter struct {
 	mu             []*sync.Mutex
 	idx            int
 	flushSemaphore chan struct{}
-	wg             sync.WaitGroup
+
+	wg   sync.WaitGroup
+	done chan bool
 }
 
 type Option func(r *Reporter)
@@ -36,19 +38,23 @@ func NewReporter(opt ...Option) *Reporter {
 	for _, o := range opt {
 		o(m)
 	}
+	m.done = make(chan bool, 1)
 	go m.flusher()
 	return m
 }
 
 func (r *Reporter) flusher() {
 	for {
-		<-r.bufferFlushTicker.C
-		for i, mu := range r.mu {
-			mu.Lock()
-			r.flush(i)
-			mu.Unlock()
+		select {
+		case <-r.bufferFlushTicker.C:
+			for i, mu := range r.mu {
+				mu.Lock()
+				r.flush(i)
+				mu.Unlock()
+			}
+		case <-r.done:
+			return
 		}
-
 	}
 }
 
@@ -86,6 +92,7 @@ func calcHash(name string, tags ...string) uint64 {
 	return xxhash.Sum64(b.Bytes())
 }
 func (r *Reporter) Close() {
+	r.done <- true
 	for i, mu := range r.mu {
 		mu.Lock()
 		r.flush(i)
@@ -101,10 +108,10 @@ func (r *Reporter) flush(i int) {
 	r.flushSemaphore <- struct{}{}
 	go func() {
 		defer func() {
+			<-r.flushSemaphore
 			tmp.Reset()
 			metricsPool.Put(tmp)
 			r.wg.Done()
-			<-r.flushSemaphore
 		}()
 		r.driver.Send(tmp)
 	}()

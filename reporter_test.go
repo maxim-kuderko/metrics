@@ -67,8 +67,8 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 
 func TestReporter_Send(t *testing.T) {
 	stu := drivers.NewTestStub()
-	r := NewReporter(WithDriver(stu))
-	count := 100000
+	r := NewReporter(WithDriver(stu), WithFlushTicker(time.Second*10))
+	count := 1000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
 		tagsA := randArr()
@@ -144,15 +144,15 @@ func TestReporter_Send_Small(t *testing.T) {
 
 func TestReporter_SendC(t *testing.T) {
 	stu := drivers.NewTestStub()
-	r := NewReporter(WithDriver(stu))
 	concurrency := 8
+	r := NewReporter(WithDriver(stu))
 	count := 10000000 * concurrency
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
 	name := `name`
 	v := 1.0
-	tagsAr := make([][]string, 0, 1000)
-	for i := 0; i < 1000; i++ {
+	tagsAr := make([][]string, 0, 10000)
+	for i := 0; i < 10000; i++ {
 		tagsA := randArr()
 		k := ``
 		for _, v := range tagsA {
@@ -231,7 +231,6 @@ func TestReporter_Send_UDP(t *testing.T) {
 		for i := 0; i < count; i++ {
 			r.Send(`name`, 1, tagsAr[i%cardinality]...)
 		}
-		fmt.Println(`closing`)
 		r.Close()
 	}()
 	wg.Wait()
@@ -293,7 +292,6 @@ func TestReporter_Send_TCP(t *testing.T) {
 		for i := 0; i < count; i++ {
 			r.Send(`name`, 1, tagsAr[i%cardinality]...)
 		}
-		fmt.Println(`closing`)
 		r.Close()
 	}()
 	wg.Wait()
