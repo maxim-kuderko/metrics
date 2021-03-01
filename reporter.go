@@ -13,8 +13,8 @@ import (
 type Reporter struct {
 	driver Driver
 
-	buff              []entities.Metrics
-	bufferFlushTicker *time.Ticker
+	buff   []entities.Metrics
+	ticker *time.Ticker
 
 	mu             []*sync.Mutex
 	idx            int
@@ -46,7 +46,7 @@ func NewReporter(opt ...Option) *Reporter {
 func (r *Reporter) flusher() {
 	for {
 		select {
-		case <-r.bufferFlushTicker.C:
+		case <-r.ticker.C:
 			for i, mu := range r.mu {
 				mu.Lock()
 				r.flush(i)

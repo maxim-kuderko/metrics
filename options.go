@@ -14,7 +14,7 @@ func WithDriver(d Driver) Option {
 
 func WithFlushTicker(duration time.Duration) Option {
 	return func(r *Reporter) {
-		r.bufferFlushTicker = time.NewTicker(duration)
+		r.ticker = time.NewTicker(duration)
 	}
 }
 
