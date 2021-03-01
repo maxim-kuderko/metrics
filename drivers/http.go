@@ -7,6 +7,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/maxim-kuderko/metrics/entities"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -38,6 +39,7 @@ func (s *HTTP) Send(metrics entities.Metrics) {
 func (s *HTTP) flush(buffer io.Reader) {
 	resp, err := http.Post(s.addr, ``, buffer)
 	if err != nil {
+		io.Copy(ioutil.Discard, buffer)
 		fmt.Println(`error sending http `, err)
 		return
 	}

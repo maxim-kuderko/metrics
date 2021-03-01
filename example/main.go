@@ -4,25 +4,29 @@ import (
 	"fmt"
 	"github.com/maxim-kuderko/metrics"
 	"github.com/maxim-kuderko/metrics/drivers"
-	"math/rand"
+	"github.com/valyala/fastrand"
+	"os"
+	"strconv"
+	"sync"
 	"time"
 )
 
 func main() {
-	reporter := metrics.NewReporter(metrics.WithDriver(drivers.NewHTTP(`http://localhost:8080/send`, time.Second*10)), metrics.WithConcurrency(1))
-	str := RandStringRunes(20)
-	for {
-		reporter.Send(fmt.Sprintf(`%s%d`, str, rand.Int()%1000000), 1)
-	}
-	reporter.Close()
+	con, _ := strconv.Atoi(os.Getenv(`CON`))
+	card, _ := strconv.Atoi(os.Getenv(`CARD`))
+	c(con, card)
 }
-
-var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func RandStringRunes(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+func c(c, card int) {
+	reporter := metrics.NewReporter(metrics.WithDriver(drivers.NewHTTP(`http://192.168.0.185:8080/send`, time.Second*10)))
+	wg := sync.WaitGroup{}
+	wg.Add(c)
+	for i := 0; i < c; i++ {
+		go func() {
+			defer wg.Done()
+			for {
+				reporter.Send(fmt.Sprintf(`aa%d`, fastrand.Uint32n(uint32(card))), 1)
+			}
+		}()
 	}
-	return string(b)
+	wg.Wait()
 }

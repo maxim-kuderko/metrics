@@ -4,7 +4,8 @@ go 1.16
 
 require (
 	github.com/cespare/xxhash v1.1.0
-	github.com/golang/snappy v0.0.3 // indirect
-	github.com/json-iterator/go v1.1.10 // indirect
+	github.com/golang/snappy v0.0.3
+	github.com/json-iterator/go v1.1.10
 	github.com/valyala/bytebufferpool v1.0.0
+	github.com/valyala/fastrand v1.0.0
 )
