@@ -75,6 +75,7 @@ func (r *Reporter) Send(name string, value float64, tags ...string) {
 			Name:   name,
 			Tags:   tags,
 			Values: entities.Values{},
+			Hash:   h,
 		}
 		r.buff[shard][h] = tmp
 		v = tmp
