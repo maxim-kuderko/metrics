@@ -103,6 +103,9 @@ func (r *Reporter) Close() {
 }
 
 func (r *Reporter) flush(i int) {
+	if len(r.buff[i]) == 0 {
+		return
+	}
 	r.wg.Add(1)
 	tmp := r.buff[i]
 	r.buff[i] = metricsPool.Get().(entities.Metrics)

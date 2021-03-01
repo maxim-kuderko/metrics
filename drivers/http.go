@@ -5,6 +5,7 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/maxim-kuderko/metrics/entities"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -19,24 +20,23 @@ type HTTP struct {
 var bytesBuffer = sync.Pool{New: func() interface{} { return bytes.NewBuffer(nil) }}
 
 func (s *HTTP) Send(metrics entities.Metrics) {
-	b := bytesBuffer.Get().(*bytes.Buffer)
-	defer func() {
-		b.Reset()
-		bytesBuffer.Put(b)
+	r, w := io.Pipe()
+	enc := jsoniter.ConfigFastest.NewEncoder(w)
+	go func() {
+		defer func() {
+			w.Close()
+		}()
+		for _, m := range metrics {
+			enc.Encode(m)
+		}
 	}()
-	enc := jsoniter.ConfigFastest.NewEncoder(b)
-	for _, m := range metrics {
-		enc.Encode(m)
-	}
-	s.flush(b)
+	s.flush(r)
 }
-func (s *HTTP) flush(buffer *bytes.Buffer) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	resp, err := s.conn.Post(s.addr, ``, buffer)
+func (s *HTTP) flush(buffer io.Reader) {
+	resp, err := http.Post(s.addr, ``, buffer)
 	if err != nil {
 		fmt.Println(`error sending http `, err)
-
+		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
