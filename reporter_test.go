@@ -214,7 +214,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 				if len(d) == 0 {
 					continue
 				}
-				tmp := entities.AggregatedMetric{}
+				tmp := entities.Metric{}
 				if err := jsoniter.ConfigFastest.Unmarshal([]byte(d), &tmp); err != nil {
 					fmt.Println(err)
 					continue
@@ -258,7 +258,7 @@ func TestReporter_Send_HTTP(t *testing.T) {
 				if len(d) == 0 {
 					continue
 				}
-				tmp := entities.AggregatedMetric{}
+				tmp := entities.Metric{}
 				if err := jsoniter.ConfigFastest.Unmarshal([]byte(d), &tmp); err != nil {
 					fmt.Println(err)
 					continue

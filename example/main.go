@@ -5,6 +5,7 @@ import (
 	"github.com/maxim-kuderko/metrics"
 	"github.com/maxim-kuderko/metrics/drivers"
 	"github.com/valyala/fastrand"
+	"google.golang.org/grpc"
 	"os"
 	"strconv"
 	"sync"
@@ -17,7 +18,7 @@ func main() {
 	c(con, card)
 }
 func c(c, card int) {
-	reporter := metrics.NewReporter(metrics.WithDriver(drivers.NewHTTP(`http://192.168.0.185:8080/send`, time.Second*10)))
+	reporter := metrics.NewReporter(metrics.WithFlushTicker(time.Millisecond*20), metrics.WithDriver(drivers.NewGrpc(`localhost:8081`, grpc.WithInsecure(), grpc.WithReturnConnectionError())))
 	wg := sync.WaitGroup{}
 	wg.Add(c)
 	for i := 0; i < c; i++ {

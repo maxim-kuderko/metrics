@@ -1,12 +1,13 @@
 package drivers
 
 import (
+	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/maxim-kuderko/metrics/entities"
 	"sync"
 )
 
 type TestStub struct {
-	m  []*entities.AggregatedMetric
+	m  []*proto.Metric
 	mu sync.Mutex
 }
 
@@ -17,12 +18,12 @@ func (s *TestStub) Send(metrics entities.Metrics) {
 		s.m = append(s.m, v)
 	}
 }
-func (s *TestStub) Metrics() []*entities.AggregatedMetric {
+func (s *TestStub) Metrics() []*proto.Metric {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.m
 }
 
 func NewTestStub() *TestStub {
-	return &TestStub{m: make([]*entities.AggregatedMetric, 0)}
+	return &TestStub{m: make([]*proto.Metric, 0)}
 }

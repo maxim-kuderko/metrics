@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"github.com/cespare/xxhash"
+	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/maxim-kuderko/metrics/drivers"
 	"github.com/maxim-kuderko/metrics/entities"
 	"github.com/valyala/bytebufferpool"
@@ -71,10 +72,10 @@ func (r *Reporter) Send(name string, value float64, tags ...string) {
 	defer r.mu[shard].Unlock()
 	v, ok := r.buff[shard][h]
 	if !ok {
-		tmp := &entities.AggregatedMetric{
+		tmp := &proto.Metric{
 			Name:   name,
 			Tags:   tags,
-			Values: entities.Values{},
+			Values: &proto.Values{},
 			Hash:   h,
 			Time:   time.Now().UnixNano(),
 		}
