@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	"github.com/maxim-kuderko/metrics/entities"
+	"github.com/maxim-kuderko/metrics-collector/proto"
 	"sync"
 	"time"
 )
@@ -21,10 +21,10 @@ func WithFlushTicker(duration time.Duration) Option {
 func WithConcurrency(concurrency int) Option {
 	return func(r *Reporter) {
 		output := make([]*sync.Mutex, concurrency)
-		buffArr := make([]entities.Metrics, concurrency)
+		buffArr := make([]*proto.MetricsRequest, concurrency)
 		for i := 0; i < concurrency; i++ {
 			output[i] = &sync.Mutex{}
-			buffArr[i] = entities.Metrics{}
+			buffArr[i] = &proto.MetricsRequest{}
 		}
 		r.mu = output
 		r.buff = buffArr

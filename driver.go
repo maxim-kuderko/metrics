@@ -1,9 +1,9 @@
 package metrics
 
 import (
-	"github.com/maxim-kuderko/metrics/entities"
+	"github.com/maxim-kuderko/metrics-collector/proto"
 )
 
 type Driver interface {
-	Send(metrics entities.Metrics)
+	Send(metrics *proto.MetricsRequest)
 }

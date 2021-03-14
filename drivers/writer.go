@@ -2,7 +2,7 @@ package drivers
 
 import (
 	jsoniter "github.com/json-iterator/go"
-	"github.com/maxim-kuderko/metrics/entities"
+	"github.com/maxim-kuderko/metrics-collector/proto"
 	"io"
 )
 
@@ -10,8 +10,8 @@ type Writer struct {
 	w io.Writer
 }
 
-func (s Writer) Send(metrics entities.Metrics) {
-	for _, m := range metrics {
+func (s Writer) Send(metrics *proto.MetricsRequest) {
+	for _, m := range metrics.Metric {
 		jsoniter.ConfigFastest.NewEncoder(s.w).Encode(m)
 	}
 }

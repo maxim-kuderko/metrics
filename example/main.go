@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/maxim-kuderko/metrics"
 	"github.com/maxim-kuderko/metrics/drivers"
+	"github.com/un000/grpc-snappy"
 	"github.com/valyala/fastrand"
 	"google.golang.org/grpc"
 	"os"
@@ -18,7 +20,8 @@ func main() {
 	c(con, card)
 }
 func c(c, card int) {
-	reporter := metrics.NewReporter(metrics.WithFlushTicker(time.Millisecond*20), metrics.WithDriver(drivers.NewGrpc(`localhost:8081`, grpc.WithInsecure(), grpc.WithReturnConnectionError())))
+	ctx, _ := context.WithTimeout(context.Background(), time.Second)
+	reporter := metrics.NewReporter(metrics.WithFlushTicker(time.Millisecond*10), metrics.WithDriver(drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(snappy.Name)))))
 	wg := sync.WaitGroup{}
 	wg.Add(c)
 	for i := 0; i < c; i++ {

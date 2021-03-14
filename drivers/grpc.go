@@ -4,32 +4,25 @@ import (
 	"context"
 	"fmt"
 	"github.com/maxim-kuderko/metrics-collector/proto"
-	"github.com/maxim-kuderko/metrics/entities"
 	"google.golang.org/grpc"
-	"io"
 )
 
 type Grpc struct {
-	c proto.MetricsCollectorGrpc_SendClient
+	c proto.MetricsCollectorGrpcClient
 }
 
-func (s Grpc) Send(metrics entities.Metrics) {
-	for _, m := range metrics {
-		if err := s.c.Send(m); err != nil && err != io.EOF {
-			fmt.Println(err)
-		}
+func (s Grpc) Send(metrics *proto.MetricsRequest) {
+	if _, err := s.c.Send(context.Background(), metrics); err != nil {
+		fmt.Println(err)
 	}
 }
 
-func NewGrpc(url string, options ...grpc.DialOption) *Grpc {
-	conn, err := grpc.Dial(url, options...)
+func NewGrpc(ctx context.Context, url string, options ...grpc.DialOption) *Grpc {
+	conn, err := grpc.DialContext(ctx, url, options...)
 	if err != nil {
 		panic(err)
 	}
 
-	c, err := proto.NewMetricsCollectorGrpcClient(conn).Send(context.Background())
-	if err != nil {
-		panic(err)
-	}
+	c := proto.NewMetricsCollectorGrpcClient(conn)
 	return &Grpc{c: c}
 }

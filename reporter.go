@@ -4,7 +4,6 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/maxim-kuderko/metrics/drivers"
-	"github.com/maxim-kuderko/metrics/entities"
 	"github.com/valyala/bytebufferpool"
 	"runtime"
 	"sync"
@@ -14,7 +13,7 @@ import (
 type Reporter struct {
 	driver Driver
 
-	buff   []entities.Metrics
+	buff   []*proto.MetricsRequest
 	ticker *time.Ticker
 
 	mu             []*sync.Mutex
@@ -61,7 +60,9 @@ func (r *Reporter) flusher() {
 
 func newBuff() func() interface{} {
 	return func() interface{} {
-		return entities.Metrics{}
+		return &proto.MetricsRequest{
+			Metric: make([]*proto.Metric, 0, 1000),
+		}
 	}
 }
 
@@ -70,19 +71,18 @@ func (r *Reporter) Send(name string, value float64, tags ...string) {
 	shard := h % uint64(len(r.mu))
 	r.mu[shard].Lock()
 	defer r.mu[shard].Unlock()
-	v, ok := r.buff[shard][h]
-	if !ok {
-		tmp := &proto.Metric{
-			Name:   name,
-			Tags:   tags,
-			Values: &proto.Values{},
-			Hash:   h,
-			Time:   time.Now().UnixNano(),
-		}
-		r.buff[shard][h] = tmp
-		v = tmp
-	}
-	v.Add(value)
+	r.buff[shard].Metric = append(r.buff[shard].Metric, &proto.Metric{
+		Name: name,
+		Tags: tags,
+		Values: &proto.Values{
+			Count: 1,
+			Min:   value,
+			Max:   value,
+			Sum:   value,
+		},
+		Hash: h,
+		Time: time.Now().UnixNano(),
+	})
 }
 
 func calcHash(name string, tags ...string) uint64 {
@@ -105,16 +105,17 @@ func (r *Reporter) Close() {
 }
 
 func (r *Reporter) flush(i int) {
-	if len(r.buff[i]) == 0 {
+	if len(r.buff[i].Metric) == 0 {
 		return
 	}
 	r.wg.Add(1)
 	tmp := r.buff[i]
-	r.buff[i] = metricsPool.Get().(entities.Metrics)
+	r.buff[i] = metricsPool.Get().(*proto.MetricsRequest)
 	r.flushSemaphore <- struct{}{}
 	go func() {
 		defer func() {
 			<-r.flushSemaphore
+			tmp.Metric = tmp.Metric[:0]
 			tmp.Reset()
 			metricsPool.Put(tmp)
 			r.wg.Done()
