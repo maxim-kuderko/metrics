@@ -76,9 +76,11 @@ func (r *Reporter) Send(name string, value float64, tags ...string) {
 		Tags: tags,
 		Values: &proto.Values{
 			Count: 1,
+			Sum:   value,
 			Min:   value,
 			Max:   value,
-			Sum:   value,
+			First: value,
+			Last:  value,
 		},
 		Hash: h,
 		Time: time.Now().UnixNano(),
