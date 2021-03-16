@@ -188,7 +188,7 @@ func TestReporter_SendC(t *testing.T) {
 }
 
 func TestReporter_Send_UDP(t *testing.T) {
-	count := 1000
+	count := 1000000
 	addr := `127.0.0.1:9999`
 	addrS := net.UDPAddr{
 		Port: 9999,
@@ -202,20 +202,20 @@ func TestReporter_Send_UDP(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for {
-			buff := make([]byte, 10000)
+			buff := make([]byte, drivers.UDPBufferSize)
 			ln.SetReadDeadline(time.Now().Add(time.Second * 2))
 			n, err := ln.Read(buff)
 			if err != nil {
-				if 1-(float64(c.Load())/float64(count)) > 0.1 {
+				if 1-(float64(c.Load())/float64(count)) > 0.01 {
 					t.Fatalf("got %d expexted %d, loss is %0.2f", c.Load(), count, 1-(float64(c.Load())/float64(count)))
 				}
 				break
 			}
 			go func(buff []byte) {
 				scanned := 0
-				for scanned+10 < n {
-					size := int(binary.BigEndian.Uint32(buff[scanned : scanned+10]))
-					scanned += 10
+				for scanned+4 < n {
+					size := int(binary.BigEndian.Uint32(buff[scanned : scanned+4]))
+					scanned += 4
 					tmp := proto.Metric{}
 					if err = marshaler.Unmarshal(buff[scanned:scanned+size], &tmp); err != nil {
 						t.Fatal(err)

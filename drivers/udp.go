@@ -17,18 +17,20 @@ type UDP struct {
 	mu sync.Mutex
 }
 
+const UDPBufferSize = 8 << 9
+
 func (s *UDP) Send(metrics *proto.Metric) {
 	b, _ := marshaler.Marshal(metrics)
-	si := make([]byte, 10)
+	si := make([]byte, 4)
 	binary.BigEndian.PutUint32(si, uint32(len(b)))
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.buff.Write(si)
-	s.buff.Write(b)
-	if s.buff.Len() > 1000 {
+	if s.buff.Len()+len(b)+len(si) >= UDPBufferSize {
 		s.buff.WriteTo(s.w)
 		s.buff.Reset()
 	}
+	s.buff.Write(si)
+	s.buff.Write(b)
 	counter.Send(metrics)
 }
 
