@@ -4,7 +4,6 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/valyala/bytebufferpool"
-	"sync"
 	"time"
 )
 
@@ -14,22 +13,12 @@ type Reporter struct {
 
 type Option func(r *Reporter)
 
-var metricsPool = sync.Pool{New: newBuff()}
-
 func NewReporter(opt ...Option) *Reporter {
 	m := &Reporter{}
 	for _, o := range opt {
 		o(m)
 	}
 	return m
-}
-
-func newBuff() func() interface{} {
-	return func() interface{} {
-		return &proto.MetricsRequest{
-			Metric: make([]*proto.Metric, 0, 1000),
-		}
-	}
 }
 
 func (r *Reporter) Send(name string, value float64, tags ...string) {
