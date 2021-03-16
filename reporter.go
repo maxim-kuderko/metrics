@@ -4,17 +4,22 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/valyala/bytebufferpool"
+	"go.uber.org/atomic"
 	"time"
 )
 
 type Reporter struct {
 	driver []Driver
+
+	lb *atomic.Int32
 }
 
 type Option func(r *Reporter)
 
 func NewReporter(opt ...Option) *Reporter {
-	m := &Reporter{}
+	m := &Reporter{
+		lb: atomic.NewInt32(0),
+	}
 	for _, o := range opt {
 		o(m)
 	}
@@ -35,7 +40,13 @@ func (r *Reporter) Send(name string, value float64, tags ...string) {
 	m.Values.Last = value
 	m.Hash = h
 	m.Time = time.Now().UnixNano()
-	r.driver[h%uint64(len(r.driver))].Send(m)
+	lb := r.lb.Inc()
+	l := int32(len(r.driver))
+	r.driver[lb%l].Send(m)
+	if lb > l {
+		r.lb.Store(0)
+	}
+
 }
 
 func (r *Reporter) Close() {

@@ -1,21 +1,16 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/maxim-kuderko/metrics"
 	"github.com/maxim-kuderko/metrics/drivers"
-	snappy "github.com/un000/grpc-snappy"
-	"google.golang.org/grpc"
 	"log"
 	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"sync"
-	"time"
-
-	_ "net/http/pprof"
 )
 
 func main() {
@@ -27,13 +22,16 @@ func main() {
 	c(con, card)
 }
 func c(c, card int) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second)
-	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(snappy.Name)))
-	}, c))
-	/*reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewHTTP(`http://localhost:8080/send`, time.Second)
+	//ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	/*	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
+		return drivers.NewCounter()
 	}, c))*/
+	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
+		return drivers.NewUDP(`localhost:8080`)
+	}, c))
+	/*	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
+		return drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure())
+	}, 1))*/
 	wg := sync.WaitGroup{}
 	wg.Add(c)
 	names := make([]string, 0, card)

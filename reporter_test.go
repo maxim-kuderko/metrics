@@ -1,14 +1,15 @@
 package metrics
 
 import (
+	"encoding/binary"
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
+	marshaler "github.com/golang/protobuf/proto"
 	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/maxim-kuderko/metrics/drivers"
+	"go.uber.org/atomic"
 	"math/rand"
 	"net"
 	"reflect"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -187,7 +188,7 @@ func TestReporter_SendC(t *testing.T) {
 }
 
 func TestReporter_Send_UDP(t *testing.T) {
-	count := 100000
+	count := 1000
 	addr := `127.0.0.1:9999`
 	addrS := net.UDPAddr{
 		Port: 9999,
@@ -196,41 +197,41 @@ func TestReporter_Send_UDP(t *testing.T) {
 	ln, _ := net.ListenUDP(`udp`, &addrS)
 	wg := sync.WaitGroup{}
 	wg.Add(2)
-	c := int64(0)
+	c := atomic.NewInt64(0)
 
 	go func() {
 		defer wg.Done()
-		buff := make([]byte, 1<<20)
 		for {
-			ln.SetReadBuffer(1 << 20)
-			ln.SetReadDeadline(time.Now().Add(time.Second * 5))
+			buff := make([]byte, 10000)
+			ln.SetReadDeadline(time.Now().Add(time.Second * 2))
 			n, err := ln.Read(buff)
 			if err != nil {
-				if c != int64(count) {
-					t.Fatalf("got %d expexted %d", c, count)
+				if 1-(float64(c.Load())/float64(count)) > 0.1 {
+					t.Fatalf("got %d expexted %d, loss is %0.2f", c.Load(), count, 1-(float64(c.Load())/float64(count)))
 				}
 				break
 			}
-			s := strings.Split(string(buff[:n]), "\n")
-			for _, d := range s {
-				if len(d) == 0 {
-					continue
+			go func(buff []byte) {
+				scanned := 0
+				for scanned+10 < n {
+					size := int(binary.BigEndian.Uint32(buff[scanned : scanned+10]))
+					scanned += 10
+					tmp := proto.Metric{}
+					if err = marshaler.Unmarshal(buff[scanned:scanned+size], &tmp); err != nil {
+						t.Fatal(err)
+					}
+					c.Add(tmp.Values.Count)
+					scanned += size
 				}
-				tmp := proto.Metric{}
-				if err := jsoniter.ConfigFastest.Unmarshal([]byte(d), &tmp); err != nil {
-					fmt.Println(err)
-					continue
-				}
-				c += tmp.Values.Count
-			}
+			}(buff)
 		}
 	}()
 	go func() {
 		defer wg.Done()
-		cardinality := 1000
+		cardinality := 1
 		r := NewReporter(WithDriver(func() Driver {
 			return drivers.NewUDP(addr)
-		}, 1))
+		}, 10))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
 			tagsAr = append(tagsAr, randArr())

@@ -6,12 +6,10 @@ import (
 	"github.com/maxim-kuderko/metrics-collector/proto"
 	"google.golang.org/grpc"
 	"io"
-	"sync"
 )
 
 type Grpc struct {
-	c  proto.MetricsCollectorGrpc_SendClient
-	mu sync.Mutex
+	c proto.MetricsCollectorGrpc_SendClient
 }
 
 func (s *Grpc) Send(metrics *proto.Metric) {
