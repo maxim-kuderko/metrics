@@ -10,10 +10,8 @@ type Writer struct {
 	w io.Writer
 }
 
-func (s Writer) Send(metrics *proto.MetricsRequest) {
-	for _, m := range metrics.Metric {
-		jsoniter.ConfigFastest.NewEncoder(s.w).Encode(m)
-	}
+func (s Writer) Send(metrics *proto.Metric) {
+	jsoniter.ConfigFastest.NewEncoder(s.w).Encode(metrics)
 }
 
 func NewWriter(w io.Writer) *Writer {

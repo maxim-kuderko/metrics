@@ -1,33 +1,11 @@
 package metrics
 
-import (
-	"github.com/maxim-kuderko/metrics-collector/proto"
-	"sync"
-	"time"
-)
-
-func WithDriver(d Driver) Option {
+func WithDriver(d func() Driver, concurrency int) Option {
 	return func(r *Reporter) {
-		r.driver = d
-	}
-}
-
-func WithFlushTicker(duration time.Duration) Option {
-	return func(r *Reporter) {
-		r.ticker = time.NewTicker(duration)
-	}
-}
-
-func WithConcurrency(concurrency int) Option {
-	return func(r *Reporter) {
-		output := make([]*sync.Mutex, concurrency)
-		buffArr := make([]*proto.MetricsRequest, concurrency)
+		drivers := make([]Driver, 0, concurrency)
 		for i := 0; i < concurrency; i++ {
-			output[i] = &sync.Mutex{}
-			buffArr[i] = &proto.MetricsRequest{}
+			drivers = append(drivers, d())
 		}
-		r.mu = output
-		r.buff = buffArr
-		r.flushSemaphore = make(chan struct{}, concurrency)
+		r.driver = drivers
 	}
 }

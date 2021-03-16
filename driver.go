@@ -5,5 +5,5 @@ import (
 )
 
 type Driver interface {
-	Send(metrics *proto.MetricsRequest)
+	Send(metrics *proto.Metric)
 }

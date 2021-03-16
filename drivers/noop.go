@@ -1,11 +1,13 @@
 package drivers
 
-import "github.com/maxim-kuderko/metrics/entities"
+import (
+	"github.com/maxim-kuderko/metrics-collector/proto"
+)
 
 type Noop struct {
 }
 
-func (s Noop) Send(metrics entities.Metrics) {
+func (s Noop) Send(metrics *proto.Metric) {
 }
 
 func NewNoop() *Noop {

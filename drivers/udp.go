@@ -2,43 +2,26 @@ package drivers
 
 import (
 	jsoniter "github.com/json-iterator/go"
-	"github.com/maxim-kuderko/metrics/entities"
-	"github.com/valyala/bytebufferpool"
+	"github.com/maxim-kuderko/metrics-collector/proto"
 	"net"
-	"sync"
 )
 
 type UDP struct {
 	conn net.Conn
-	mu   sync.Mutex
+	enc  *jsoniter.Encoder
 }
 
-const udpBufferSize = 6500
-
-func (s *UDP) Send(metrics entities.Metrics) {
-	b := bytebufferpool.Get()
-	defer bytebufferpool.Put(b)
-	enc := jsoniter.ConfigFastest.NewEncoder(b)
-	for _, m := range metrics {
-		enc.Encode(m)
-		if b.Len() > udpBufferSize {
-			s.flush(b)
-			b.Reset()
-		}
-	}
-	if b.Len() > 0 {
-		s.flush(b)
-	}
-}
-func (s *UDP) flush(buffer *bytebufferpool.ByteBuffer) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	buffer.WriteTo(s.conn)
+func (s *UDP) Send(metrics *proto.Metric) {
+	s.enc.Encode(metrics)
 }
 
-func NewUDP(addr string) (*UDP, error) {
+func NewUDP(addr string) *UDP {
 	c, err := net.Dial(`udp`, addr)
+	if err != nil {
+		panic(err)
+	}
 	return &UDP{
 		conn: c,
-	}, err
+		enc:  jsoniter.ConfigFastest.NewEncoder(c),
+	}
 }

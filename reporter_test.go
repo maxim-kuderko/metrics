@@ -2,15 +2,11 @@ package metrics
 
 import (
 	"fmt"
-	"github.com/golang/snappy"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/maxim-kuderko/metrics/drivers"
-	"github.com/maxim-kuderko/metrics/entities"
-	"io/ioutil"
-	"log"
 	"math/rand"
 	"net"
-	"net/http"
 	"reflect"
 	"strings"
 	"sync"
@@ -20,18 +16,16 @@ import (
 
 func BenchmarkReporter_Send(b *testing.B) {
 	b.ReportAllocs()
-	r := NewReporter(WithDriver(drivers.NewNoop()), WithConcurrency(2))
+	r := NewReporter(WithDriver(func() Driver {
+		return drivers.NewNoop()
+	}, 1))
 	name := `name`
-	v := 1.0
-
-	tagsAr := make([][]string, 0, 1000)
-	for i := 0; i < 100; i++ {
-		tagsAr = append(tagsAr, randArr())
-	}
+	v := 0.1
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r.Send(name, v, tagsAr[i%len(tagsAr)]...)
+		r.Send(name, v)
 	}
+
 }
 
 func randArr() []string {
@@ -47,7 +41,9 @@ func randArr() []string {
 
 func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 	b.ReportAllocs()
-	r := NewReporter(WithDriver(drivers.NewNoop()))
+	r := NewReporter(WithDriver(func() Driver {
+		return drivers.NewNoop()
+	}, 8))
 	name := `name`
 	v := 0.1
 	concurrency := 32
@@ -71,7 +67,9 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 
 func TestReporter_Send(t *testing.T) {
 	stu := drivers.NewTestStub()
-	r := NewReporter(WithDriver(stu), WithFlushTicker(time.Second*10))
+	r := NewReporter(WithDriver(func() Driver {
+		return stu
+	}, 1))
 	count := 1000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
@@ -114,7 +112,9 @@ func TestReporter_Send(t *testing.T) {
 
 func TestReporter_Send_Small(t *testing.T) {
 	stu := drivers.NewTestStub()
-	r := NewReporter(WithDriver(stu))
+	r := NewReporter(WithDriver(func() Driver {
+		return stu
+	}, 1))
 	count := 2000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
@@ -149,7 +149,9 @@ func TestReporter_Send_Small(t *testing.T) {
 func TestReporter_SendC(t *testing.T) {
 	stu := drivers.NewTestStub()
 	concurrency := 8
-	r := NewReporter(WithDriver(stu))
+	r := NewReporter(WithDriver(func() Driver {
+		return stu
+	}, 1))
 	count := 100000 * concurrency
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
@@ -214,7 +216,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 				if len(d) == 0 {
 					continue
 				}
-				tmp := entities.Metric{}
+				tmp := proto.Metric{}
 				if err := jsoniter.ConfigFastest.Unmarshal([]byte(d), &tmp); err != nil {
 					fmt.Println(err)
 					continue
@@ -225,67 +227,10 @@ func TestReporter_Send_UDP(t *testing.T) {
 	}()
 	go func() {
 		defer wg.Done()
-		udp, _ := drivers.NewUDP(addr)
 		cardinality := 1000
-		r := NewReporter(WithDriver(udp), WithConcurrency(8))
-		tagsAr := make([][]string, 0, cardinality)
-		for i := 0; i < cardinality; i++ {
-			tagsAr = append(tagsAr, randArr())
-		}
-		for i := 0; i < count; i++ {
-			r.Send(`name`, 1, tagsAr[i%cardinality]...)
-		}
-		r.Close()
-	}()
-	wg.Wait()
-}
-
-func TestReporter_Send_HTTP(t *testing.T) {
-	count := 10000
-	port := `9999`
-	addr := fmt.Sprintf(`http://127.0.0.1:%s/send`, port)
-
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	c := int64(0)
-	go func() {
-		http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-			b, _ := ioutil.ReadAll(snappy.NewReader(r.Body))
-			defer r.Body.Close()
-			s := strings.Split(string(b), "\n")
-			for _, d := range s {
-				if len(d) == 0 {
-					continue
-				}
-				tmp := entities.Metric{}
-				if err := jsoniter.ConfigFastest.Unmarshal([]byte(d), &tmp); err != nil {
-					fmt.Println(err)
-					continue
-				}
-				c += tmp.Values.Count
-			}
-		})
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
-	}()
-
-	go func() {
-		defer wg.Done()
-		tries := 0
-		for c != int64(count) && tries < 5 {
-			time.Sleep(time.Second)
-			tries++
-		}
-		if c != int64(count) {
-			t.Fatalf("got %d expexted %d", c, count)
-		}
-
-	}()
-	go func() {
-		defer wg.Done()
-		ht := drivers.NewHTTP(addr, time.Second)
-		cardinality := 100
-		r := NewReporter(WithDriver(ht), WithConcurrency(8), WithFlushTicker(time.Millisecond*10))
+		r := NewReporter(WithDriver(func() Driver {
+			return drivers.NewUDP(addr)
+		}, 1))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
 			tagsAr = append(tagsAr, randArr())
@@ -301,11 +246,15 @@ func TestReporter_Send_HTTP(t *testing.T) {
 func BenchmarkReporter_Send_UDP(b *testing.B) {
 	b.ReportAllocs()
 	addr := `127.0.0.1:9999`
-	udp, _ := drivers.NewUDP(addr)
-	r := NewReporter(WithDriver(udp), WithConcurrency(1), WithFlushTicker(time.Second))
+	r := NewReporter(WithDriver(func() Driver {
+		return drivers.NewUDP(addr)
+	}, 1))
 	b.ResetTimer()
+	name := `name`
+	v := 1.0
+
 	for i := 0; i < b.N; i++ {
-		r.Send(`name`, 1)
+		r.Send(name, v)
 	}
 	r.Close()
 }
