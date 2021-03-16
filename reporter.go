@@ -4,10 +4,11 @@ import (
 	"github.com/cespare/xxhash"
 	"github.com/valyala/bytebufferpool"
 	"go.uber.org/atomic"
+	"sync"
 )
 
 type Reporter struct {
-	buff []*requestBuffer
+	buff *sync.Pool
 	lb   *atomic.Int32
 }
 
@@ -24,18 +25,13 @@ func NewReporter(opt ...Option) *Reporter {
 }
 
 func (r *Reporter) Send(name string, value float64, tags ...string) {
-	lb := r.lb.Inc()
-	l := int32(len(r.buff))
-	r.buff[lb%l].add(name, value, tags...)
-	if lb > l {
-		r.lb.Store(0)
-	}
+	b := r.buff.Get().(*requestBuffer)
+	defer r.buff.Put(b)
+	b.add(name, value, tags...)
 }
 
 func (r *Reporter) Close() {
-	for _, d := range r.buff {
-		d.close()
-	}
+
 }
 
 func calcHash(name string, tags ...string) uint64 {
