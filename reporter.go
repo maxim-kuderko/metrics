@@ -50,7 +50,9 @@ func (r *Reporter) Send(name string, value float64, tags ...string) {
 }
 
 func (r *Reporter) Close() {
-
+	for _, d := range r.driver {
+		d.Close()
+	}
 }
 
 func calcHash(name string, tags ...string) uint64 {

@@ -17,6 +17,9 @@ func (s *Grpc) Send(metrics *proto.Metric) {
 		fmt.Println(err)
 	}
 }
+func (s Grpc) Close() {
+	s.c.CloseSend()
+}
 
 func NewGrpc(ctx context.Context, url string, options ...grpc.DialOption) *Grpc {
 	conn, err := grpc.DialContext(ctx, url, options...)

@@ -17,6 +17,9 @@ func (s *Counter) Send(r *proto.Metric) {
 	s.c.Add(r.Values.Count)
 }
 
+func (s *Counter) Close() {
+}
+
 func NewCounter() *Counter {
 	if counter != nil {
 		return counter

@@ -203,10 +203,10 @@ func TestReporter_Send_UDP(t *testing.T) {
 		defer wg.Done()
 		for {
 			buff := make([]byte, drivers.UDPBufferSize)
-			ln.SetReadDeadline(time.Now().Add(time.Second * 2))
+			ln.SetReadDeadline(time.Now().Add(time.Second * 1))
 			n, err := ln.Read(buff)
 			if err != nil {
-				if 1-(float64(c.Load())/float64(count)) > 0.01 {
+				if 1-(float64(c.Load())/float64(count)) > 0.001 {
 					t.Fatalf("got %d expexted %d, loss is %0.2f", c.Load(), count, 1-(float64(c.Load())/float64(count)))
 				}
 				break
@@ -223,7 +223,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 					c.Add(tmp.Values.Count)
 					scanned += size
 				}
-			}(buff)
+			}(buff[:n])
 		}
 	}()
 	go func() {
@@ -231,7 +231,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 		cardinality := 1
 		r := NewReporter(WithDriver(func() Driver {
 			return drivers.NewUDP(addr)
-		}, 10))
+		}, 1))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
 			tagsAr = append(tagsAr, randArr())

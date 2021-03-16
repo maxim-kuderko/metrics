@@ -21,6 +21,9 @@ func (s *TestStub) Metrics() []*proto.Metric {
 	defer s.mu.Unlock()
 	return s.m
 }
+func (s *TestStub) Close() {
+
+}
 
 func NewTestStub() *TestStub {
 	return &TestStub{m: make([]*proto.Metric, 0)}

@@ -27,7 +27,7 @@ func c(c, card int) {
 		return drivers.NewCounter()
 	}, c))*/
 	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewUDP(`localhost:8080`)
+		return drivers.NewUDP(`localhost:8082`)
 	}, c))
 	/*	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
 		return drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure())

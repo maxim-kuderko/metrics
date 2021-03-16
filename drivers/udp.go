@@ -17,7 +17,7 @@ type UDP struct {
 	mu sync.Mutex
 }
 
-const UDPBufferSize = 8 << 9
+const UDPBufferSize = 8 << 10
 
 func (s *UDP) Send(metrics *proto.Metric) {
 	b, _ := marshaler.Marshal(metrics)
@@ -25,13 +25,21 @@ func (s *UDP) Send(metrics *proto.Metric) {
 	binary.BigEndian.PutUint32(si, uint32(len(b)))
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.buff.Len()+len(b)+len(si) >= UDPBufferSize {
+	if s.buff.Len()+len(b)+len(si) >= UDPBufferSize && s.buff.Len() > 0 {
 		s.buff.WriteTo(s.w)
 		s.buff.Reset()
 	}
 	s.buff.Write(si)
 	s.buff.Write(b)
 	counter.Send(metrics)
+}
+
+func (s *UDP) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.buff.Len() > 0 {
+		s.buff.WriteTo(s.w)
+	}
 }
 
 func NewUDP(addr string) *UDP {
