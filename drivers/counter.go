@@ -13,8 +13,8 @@ type Counter struct {
 	c *atomic.Int64
 }
 
-func (s *Counter) Send(r *proto.Metric) {
-	s.c.Add(r.Values.Count)
+func (s *Counter) Send(r *proto.MetricsRequest) {
+	s.c.Add(int64(len(r.Metrics)))
 }
 
 func (s *Counter) Close() {

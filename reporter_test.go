@@ -19,7 +19,7 @@ func BenchmarkReporter_Send(b *testing.B) {
 	b.ReportAllocs()
 	r := NewReporter(WithDriver(func() Driver {
 		return drivers.NewNoop()
-	}, 1))
+	}, 1, 1))
 	name := `name`
 	v := 0.1
 	b.ResetTimer()
@@ -44,7 +44,7 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 	b.ReportAllocs()
 	r := NewReporter(WithDriver(func() Driver {
 		return drivers.NewNoop()
-	}, 8))
+	}, 1, 8))
 	name := `name`
 	v := 0.1
 	concurrency := 32
@@ -70,7 +70,7 @@ func TestReporter_Send(t *testing.T) {
 	stu := drivers.NewTestStub()
 	r := NewReporter(WithDriver(func() Driver {
 		return stu
-	}, 1))
+	}, 1, 1))
 	count := 1000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
@@ -115,7 +115,7 @@ func TestReporter_Send_Small(t *testing.T) {
 	stu := drivers.NewTestStub()
 	r := NewReporter(WithDriver(func() Driver {
 		return stu
-	}, 1))
+	}, 1, 1))
 	count := 2000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
@@ -152,7 +152,7 @@ func TestReporter_SendC(t *testing.T) {
 	concurrency := 8
 	r := NewReporter(WithDriver(func() Driver {
 		return stu
-	}, 1))
+	}, 1, 1))
 	count := 100000 * concurrency
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
@@ -231,7 +231,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 		cardinality := 1
 		r := NewReporter(WithDriver(func() Driver {
 			return drivers.NewUDP(addr)
-		}, 1))
+		}, 1, 1))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
 			tagsAr = append(tagsAr, randArr())
@@ -249,7 +249,7 @@ func BenchmarkReporter_Send_UDP(b *testing.B) {
 	addr := `127.0.0.1:9999`
 	r := NewReporter(WithDriver(func() Driver {
 		return drivers.NewUDP(addr)
-	}, 1))
+	}, 1, 1))
 	b.ResetTimer()
 	name := `name`
 	v := 1.0

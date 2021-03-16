@@ -2,16 +2,13 @@ package metrics
 
 import (
 	"github.com/cespare/xxhash"
-	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/valyala/bytebufferpool"
 	"go.uber.org/atomic"
-	"time"
 )
 
 type Reporter struct {
-	driver []Driver
-
-	lb *atomic.Int32
+	buff []*requestBuffer
+	lb   *atomic.Int32
 }
 
 type Option func(r *Reporter)
@@ -27,31 +24,17 @@ func NewReporter(opt ...Option) *Reporter {
 }
 
 func (r *Reporter) Send(name string, value float64, tags ...string) {
-	h := calcHash(name, tags...)
-	m := proto.MetricPool.Get().(*proto.Metric)
-	defer proto.MetricPool.Put(m)
-	m.Name = name
-	m.Tags = tags
-	m.Values.Count = 1
-	m.Values.Sum = value
-	m.Values.Min = value
-	m.Values.Max = value
-	m.Values.First = value
-	m.Values.Last = value
-	m.Hash = h
-	m.Time = time.Now().UnixNano()
 	lb := r.lb.Inc()
-	l := int32(len(r.driver))
-	r.driver[lb%l].Send(m)
+	l := int32(len(r.buff))
+	r.buff[lb%l].add(name, value, tags...)
 	if lb > l {
 		r.lb.Store(0)
 	}
-
 }
 
 func (r *Reporter) Close() {
-	for _, d := range r.driver {
-		d.Close()
+	for _, d := range r.buff {
+		d.close()
 	}
 }
 

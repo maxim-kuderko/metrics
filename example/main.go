@@ -9,11 +9,13 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 )
 
 func main() {
+	runtime.SetMutexProfileFraction(5)
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
@@ -23,15 +25,16 @@ func main() {
 }
 func c(c, card int) {
 	//ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	/*	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewCounter()
-	}, c))*/
 	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
+		return drivers.NewCounter()
+	}, 1000, runtime.GOMAXPROCS(0)*2))
+	/*reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
 		return drivers.NewUDP(`localhost:8082`)
-	}, c))
+	}, c))*/
+
 	/*	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure())
-	}, 1))*/
+		return drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(snappy.Name)))
+	},1000, c*2))*/
 	wg := sync.WaitGroup{}
 	wg.Add(c)
 	names := make([]string, 0, card)

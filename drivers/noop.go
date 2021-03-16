@@ -7,7 +7,7 @@ import (
 type Noop struct {
 }
 
-func (s Noop) Send(metrics *proto.Metric) {
+func (s Noop) Send(metrics *proto.MetricsRequest) {
 }
 func (s Noop) Close() {
 }

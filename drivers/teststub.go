@@ -10,10 +10,10 @@ type TestStub struct {
 	mu sync.Mutex
 }
 
-func (s *TestStub) Send(metric *proto.Metric) {
+func (s *TestStub) Send(metric *proto.MetricsRequest) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.m = append(s.m, metric)
+	s.m = append(s.m, metric.Metrics...)
 
 }
 func (s *TestStub) Metrics() []*proto.Metric {

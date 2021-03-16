@@ -1,8 +1,6 @@
 package drivers
 
 import (
-	"bytes"
-	"encoding/binary"
 	marshaler "github.com/golang/protobuf/proto"
 	"github.com/maxim-kuderko/metrics-collector/proto"
 	"io"
@@ -11,35 +9,22 @@ import (
 )
 
 type UDP struct {
-	w    io.Writer
-	buff *bytes.Buffer
+	w io.Writer
 
 	mu sync.Mutex
 }
 
 const UDPBufferSize = 8 << 10
 
-func (s *UDP) Send(metrics *proto.Metric) {
+func (s *UDP) Send(metrics *proto.MetricsRequest) {
 	b, _ := marshaler.Marshal(metrics)
-	si := make([]byte, 4)
-	binary.BigEndian.PutUint32(si, uint32(len(b)))
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.buff.Len()+len(b)+len(si) >= UDPBufferSize && s.buff.Len() > 0 {
-		s.buff.WriteTo(s.w)
-		s.buff.Reset()
-	}
-	s.buff.Write(si)
-	s.buff.Write(b)
-	counter.Send(metrics)
+	s.w.Write(b)
 }
 
 func (s *UDP) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.buff.Len() > 0 {
-		s.buff.WriteTo(s.w)
-	}
+
 }
 
 func NewUDP(addr string) *UDP {
@@ -49,7 +34,6 @@ func NewUDP(addr string) *UDP {
 		panic(err)
 	}
 	return &UDP{
-		w:    c,
-		buff: bytes.NewBuffer(nil),
+		w: c,
 	}
 }

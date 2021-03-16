@@ -1,11 +1,12 @@
 package metrics
 
-func WithDriver(d func() Driver, concurrency int) Option {
+func WithDriver(d func() Driver, bulkSize int, concurrency int) Option {
 	return func(r *Reporter) {
-		drivers := make([]Driver, 0, concurrency)
+		requestBuffers := make([]*requestBuffer, 0, concurrency)
 		for i := 0; i < concurrency; i++ {
-			drivers = append(drivers, d())
+			dd := d()
+			requestBuffers = append(requestBuffers, newRequestBuffer(bulkSize, dd))
 		}
-		r.driver = drivers
+		r.buff = requestBuffers
 	}
 }

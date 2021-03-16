@@ -9,27 +9,26 @@ import (
 )
 
 type Grpc struct {
-	c proto.MetricsCollectorGrpc_SendClient
+	c proto.MetricsCollectorGrpcClient
 }
 
-func (s *Grpc) Send(metrics *proto.Metric) {
-	if err := s.c.Send(metrics); err != nil && err != io.EOF {
+func (s *Grpc) Send(metrics *proto.MetricsRequest) {
+	counter.Send(metrics)
+	if _, err := s.c.Bulk(context.Background(), metrics); err != nil && err != io.EOF {
 		fmt.Println(err)
 	}
 }
-func (s Grpc) Close() {
-	s.c.CloseSend()
+
+func (s *Grpc) Close() {
 }
 
 func NewGrpc(ctx context.Context, url string, options ...grpc.DialOption) *Grpc {
+	NewCounter()
 	conn, err := grpc.DialContext(ctx, url, options...)
 	if err != nil {
 		panic(err)
 	}
 
-	c, err := proto.NewMetricsCollectorGrpcClient(conn).Send(context.Background())
-	if err != nil {
-		panic(err)
-	}
+	c := proto.NewMetricsCollectorGrpcClient(conn)
 	return &Grpc{c: c}
 }
