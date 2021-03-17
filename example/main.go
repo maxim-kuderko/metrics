@@ -1,38 +1,27 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/maxim-kuderko/metrics"
 	"github.com/maxim-kuderko/metrics/drivers"
+	snappy "github.com/un000/grpc-snappy"
 	"github.com/valyala/fastrand"
-	"log"
-	"net/http"
-	_ "net/http/pprof"
+	"google.golang.org/grpc"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 )
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:6060", nil))
-	}()
 	con, _ := strconv.Atoi(os.Getenv(`CON`))
 	card, _ := strconv.Atoi(os.Getenv(`CARD`))
 	c(con, card)
 }
 func c(c, card int) {
-	//ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
-	/*reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewCounter()
-	}, 1000, runtime.GOMAXPROCS(0)*2))*/
-	reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewUDP(`localhost:8082`)
-	}, 100, c))
-
-	/*reporter := metrics.NewReporter(metrics.WithDriver(func() metrics.Driver {
-		return drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(snappy.Name)))
-	},1000, c*2))*/
+	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*100)
+	reporter := metrics.NewReporter(metrics.WithDriver(drivers.NewGrpc(ctx, `localhost:8081`, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.UseCompressor(snappy.Name))), 10000))
 	wg := sync.WaitGroup{}
 	wg.Add(c)
 	names := make([]string, 0, card)
