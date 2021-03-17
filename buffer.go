@@ -28,8 +28,7 @@ func newRequestBuffer(size int, driver Driver) *requestBuffer {
 	}
 }
 
-func (rb *requestBuffer) add(name string, value float64, tags ...string) {
-	h := calcHash(name, tags...)
+func (rb *requestBuffer) add(name string, value float64, h uint64, tags ...string) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 	rb.data.Metrics[rb.idx].Name = name
