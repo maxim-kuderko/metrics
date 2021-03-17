@@ -41,9 +41,6 @@ func (s *UDP) Send(metrics *proto.MetricsRequest) {
 	counter.Send(metrics)
 }
 
-func (s *UDP) Close() {
-}
-
 func NewUDP(addr string) *UDP {
 	NewCounter()
 	c, err := net.Dial(`udp`, addr)

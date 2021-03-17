@@ -19,9 +19,6 @@ func (s *Grpc) Send(metrics *proto.MetricsRequest) {
 	}
 }
 
-func (s *Grpc) Close() {
-}
-
 func NewGrpc(ctx context.Context, url string, options ...grpc.DialOption) *Grpc {
 	NewCounter()
 	conn, err := grpc.DialContext(ctx, url, options...)

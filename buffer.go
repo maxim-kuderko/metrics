@@ -49,11 +49,3 @@ func (rb *requestBuffer) add(name string, value float64, tags ...string) {
 	}
 	rb.idx++
 }
-
-func (rb *requestBuffer) close() {
-	rb.mu.Lock()
-	defer rb.mu.Unlock()
-	rb.driver.Send(rb.data)
-	rb.idx = 0
-	return
-}

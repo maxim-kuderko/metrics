@@ -17,9 +17,6 @@ func (s *Counter) Send(r *proto.MetricsRequest) {
 	s.c.Add(int64(len(r.Metrics)))
 }
 
-func (s *Counter) Close() {
-}
-
 func NewCounter() *Counter {
 	if counter != nil {
 		return counter
