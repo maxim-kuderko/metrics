@@ -1,11 +1,14 @@
 package metrics
 
 import (
+	"bytes"
 	"fmt"
 	marshaler "github.com/golang/protobuf/proto"
+	"github.com/golang/snappy"
 	"github.com/maxim-kuderko/metrics-collector/proto"
 	"github.com/maxim-kuderko/metrics/drivers"
 	"go.uber.org/atomic"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"reflect"
@@ -205,14 +208,15 @@ func TestReporter_Send_UDP(t *testing.T) {
 			ln.SetReadDeadline(time.Now().Add(time.Second * 1))
 			n, err := ln.Read(buff)
 			if err != nil {
-				if 1-(float64(c.Load())/float64(count)) > 0.001 {
+				if 1-(float64(c.Load())/float64(count)) > 0.01 {
 					t.Fatalf("got %d expexted %d, loss is %0.2f", c.Load(), count, 1-(float64(c.Load())/float64(count)))
 				}
 				break
 			}
 			go func(buff []byte) {
+				b, _ := ioutil.ReadAll(snappy.NewReader(bytes.NewBuffer(buff)))
 				tmp := proto.MetricsRequest{}
-				if err = marshaler.Unmarshal(buff, &tmp); err != nil {
+				if err = marshaler.Unmarshal(b, &tmp); err != nil {
 					t.Fatal(err)
 				}
 				c.Add(int64(len(tmp.Metrics)))

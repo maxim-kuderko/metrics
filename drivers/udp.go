@@ -2,14 +2,15 @@ package drivers
 
 import (
 	marshaler "github.com/golang/protobuf/proto"
+	"github.com/golang/snappy"
 	"github.com/maxim-kuderko/metrics-collector/proto"
-	"io"
 	"net"
 	"sync"
 )
 
 type UDP struct {
-	w io.Writer
+	c net.Conn
+	w *snappy.Writer
 }
 
 const UDPBufferSize = 8 << 13
@@ -26,6 +27,8 @@ func (s *UDP) Send(metrics *proto.MetricsRequest) {
 	}()
 	buff.Marshal(metrics)
 	s.w.Write(buff.Bytes())
+	s.w.Flush()
+	s.w.Reset(s.c)
 	counter.Send(metrics)
 }
 
@@ -39,6 +42,7 @@ func NewUDP(addr string) *UDP {
 		panic(err)
 	}
 	return &UDP{
-		w: c,
+		c: c,
+		w: snappy.NewBufferedWriter(c),
 	}
 }
