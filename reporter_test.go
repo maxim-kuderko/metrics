@@ -66,7 +66,7 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 
 func TestReporter_Send(t *testing.T) {
 	stu := drivers.NewTestStub()
-	r := NewReporter(WithDriver(drivers.NewNoop(), 1))
+	r := NewReporter(WithDriver(stu, 1))
 	count := 1000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
@@ -109,7 +109,7 @@ func TestReporter_Send(t *testing.T) {
 
 func TestReporter_Send_Small(t *testing.T) {
 	stu := drivers.NewTestStub()
-	r := NewReporter(WithDriver(drivers.NewNoop(), 1))
+	r := NewReporter(WithDriver(stu, 1))
 	count := 2000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
@@ -144,7 +144,7 @@ func TestReporter_Send_Small(t *testing.T) {
 func TestReporter_SendC(t *testing.T) {
 	stu := drivers.NewTestStub()
 	concurrency := 8
-	r := NewReporter(WithDriver(drivers.NewNoop(), 1))
+	r := NewReporter(WithDriver(stu, 1))
 	count := 100000 * concurrency
 	wg := sync.WaitGroup{}
 	wg.Add(concurrency)
