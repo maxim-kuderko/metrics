@@ -29,9 +29,6 @@ func (s *UDP) Send(metrics *proto.MetricsRequest) {
 		marshlerPool.Put(buff)
 	}()
 	buff.Marshal(metrics)
-	if len(buff.Bytes()) > UDPBufferSize {
-		fmt.Println(`aa`)
-	}
 	b := bytebufferpool.Get()
 	defer bytebufferpool.Put(b)
 	w := snappy.NewWriter(b)

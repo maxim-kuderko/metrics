@@ -4,18 +4,16 @@ import (
 	"fmt"
 	"github.com/maxim-kuderko/metrics"
 	"github.com/maxim-kuderko/metrics/drivers"
+	"github.com/valyala/fastrand"
 	"log"
-	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"runtime"
 	"strconv"
 	"sync"
 )
 
 func main() {
-	runtime.SetMutexProfileFraction(5)
 	go func() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
@@ -39,16 +37,18 @@ func c(c, card int) {
 	wg.Add(c)
 	names := make([]string, 0, card)
 	for i := 0; i < card; i++ {
-		names = append(names, fmt.Sprintf(`aa%d`, rand.Int31n(int32(card))))
+		names = append(names, fmt.Sprintf(`aa%d`, fastrand.Uint32n(uint32(card))))
 	}
 	for i := 0; i < c; i++ {
 		go func() {
 			j := 0
 			defer wg.Done()
 			for {
-				reporter.Send(names[j], 1)
-				if j > len(names) {
+				reporter.Send(`metric_name`, 1, `tag`, names[j])
+				if j == len(names)-1 {
 					j = 0
+				} else {
+					j++
 				}
 			}
 		}()
