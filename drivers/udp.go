@@ -10,21 +10,26 @@ import (
 
 type UDP struct {
 	w io.Writer
-
-	mu sync.Mutex
 }
 
-const UDPBufferSize = 8 << 10
+const UDPBufferSize = 8 << 13
+
+var marshlerPool = &sync.Pool{New: func() interface{} {
+	return marshaler.NewBuffer(nil)
+}}
 
 func (s *UDP) Send(metrics *proto.MetricsRequest) {
-	b, _ := marshaler.Marshal(metrics)
-	s.w.Write(b)
+	buff := marshlerPool.Get().(*marshaler.Buffer)
+	defer func() {
+		buff.Reset()
+		marshlerPool.Put(buff)
+	}()
+	buff.Marshal(metrics)
+	s.w.Write(buff.Bytes())
+	counter.Send(metrics)
 }
 
 func (s *UDP) Close() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 }
 
 func NewUDP(addr string) *UDP {

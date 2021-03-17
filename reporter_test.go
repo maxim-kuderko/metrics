@@ -1,7 +1,6 @@
 package metrics
 
 import (
-	"encoding/binary"
 	"fmt"
 	marshaler "github.com/golang/protobuf/proto"
 	"github.com/maxim-kuderko/metrics-collector/proto"
@@ -212,17 +211,11 @@ func TestReporter_Send_UDP(t *testing.T) {
 				break
 			}
 			go func(buff []byte) {
-				scanned := 0
-				for scanned+4 < n {
-					size := int(binary.BigEndian.Uint32(buff[scanned : scanned+4]))
-					scanned += 4
-					tmp := proto.Metric{}
-					if err = marshaler.Unmarshal(buff[scanned:scanned+size], &tmp); err != nil {
-						t.Fatal(err)
-					}
-					c.Add(tmp.Values.Count)
-					scanned += size
+				tmp := proto.MetricsRequest{}
+				if err = marshaler.Unmarshal(buff, &tmp); err != nil {
+					t.Fatal(err)
 				}
+				c.Add(int64(len(tmp.Metrics)))
 			}(buff[:n])
 		}
 	}()
@@ -231,7 +224,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 		cardinality := 1
 		r := NewReporter(WithDriver(func() Driver {
 			return drivers.NewUDP(addr)
-		}, 1, 1))
+		}, 100, 1))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
 			tagsAr = append(tagsAr, randArr())
@@ -249,7 +242,7 @@ func BenchmarkReporter_Send_UDP(b *testing.B) {
 	addr := `127.0.0.1:9999`
 	r := NewReporter(WithDriver(func() Driver {
 		return drivers.NewUDP(addr)
-	}, 1, 1))
+	}, 100, 1))
 	b.ResetTimer()
 	name := `name`
 	v := 1.0

@@ -8,7 +8,6 @@ import (
 
 type requestBuffer struct {
 	data *proto.MetricsRequest
-	pool *sync.Pool
 	idx  int
 
 	mu     *sync.Mutex
@@ -16,25 +15,17 @@ type requestBuffer struct {
 }
 
 func newRequestBuffer(size int, driver Driver) *requestBuffer {
-	pool := newMetricRequestPool(size)
+	vals := make([]*proto.Metric, 0, size)
+	for i := 0; i < size; i++ {
+		vals = append(vals, &proto.Metric{
+			Values: &proto.Values{},
+		})
+	}
 	return &requestBuffer{
-		data:   pool.Get().(*proto.MetricsRequest),
-		pool:   pool,
+		data:   &proto.MetricsRequest{Metrics: vals},
 		driver: driver,
 		mu:     &sync.Mutex{},
 	}
-}
-
-func newMetricRequestPool(size int) *sync.Pool {
-	return &sync.Pool{New: func() interface{} {
-		vals := make([]*proto.Metric, 0, size)
-		for i := 0; i < size; i++ {
-			vals = append(vals, &proto.Metric{
-				Values: &proto.Values{},
-			})
-		}
-		return &proto.MetricsRequest{Metrics: vals}
-	}}
 }
 
 func (rb *requestBuffer) add(name string, value float64, tags ...string) {
@@ -52,12 +43,7 @@ func (rb *requestBuffer) add(name string, value float64, tags ...string) {
 	rb.data.Metrics[rb.idx].Hash = h
 	rb.data.Metrics[rb.idx].Time = time.Now().UnixNano()
 	if rb.idx+1 == cap(rb.data.Metrics) {
-		tmp := rb.data
-		rb.data = rb.pool.Get().(*proto.MetricsRequest)
-		go func() {
-			rb.driver.Send(tmp)
-			rb.pool.Put(tmp)
-		}()
+		rb.driver.Send(rb.data)
 		rb.idx = 0
 		return
 	}
