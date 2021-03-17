@@ -1,19 +1,22 @@
 package drivers
 
 import (
+	"compress/gzip"
+	"fmt"
 	marshaler "github.com/golang/protobuf/proto"
-	"github.com/golang/snappy"
+	"github.com/klauspost/compress/snappy"
 	"github.com/maxim-kuderko/metrics-collector/proto"
+	"github.com/valyala/bytebufferpool"
 	"net"
 	"sync"
 )
 
 type UDP struct {
 	c net.Conn
-	w *snappy.Writer
+	w *gzip.Writer
 }
 
-const UDPBufferSize = 8 << 13
+const UDPBufferSize = 8 << 10
 
 var marshlerPool = &sync.Pool{New: func() interface{} {
 	return marshaler.NewBuffer(nil)
@@ -26,9 +29,18 @@ func (s *UDP) Send(metrics *proto.MetricsRequest) {
 		marshlerPool.Put(buff)
 	}()
 	buff.Marshal(metrics)
-	s.w.Write(buff.Bytes())
-	s.w.Flush()
-	s.w.Reset(s.c)
+	if len(buff.Bytes()) > UDPBufferSize {
+		fmt.Println(`aa`)
+	}
+	b := bytebufferpool.Get()
+	defer bytebufferpool.Put(b)
+	w := snappy.NewWriter(b)
+	w.Write(buff.Bytes())
+	w.Close()
+	if b.Len() > UDPBufferSize {
+		fmt.Println(`bbbb`)
+	}
+	b.WriteTo(s.c)
 	counter.Send(metrics)
 }
 
@@ -43,6 +55,5 @@ func NewUDP(addr string) *UDP {
 	}
 	return &UDP{
 		c: c,
-		w: snappy.NewBufferedWriter(c),
 	}
 }

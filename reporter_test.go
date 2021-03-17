@@ -228,7 +228,7 @@ func TestReporter_Send_UDP(t *testing.T) {
 		cardinality := 1
 		r := NewReporter(WithDriver(func() Driver {
 			return drivers.NewUDP(addr)
-		}, 100, 1))
+		}, 10, 1))
 		tagsAr := make([][]string, 0, cardinality)
 		for i := 0; i < cardinality; i++ {
 			tagsAr = append(tagsAr, randArr())

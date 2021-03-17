@@ -25,6 +25,7 @@ func NewCounter() *Counter {
 		return counter
 	}
 	s := &Counter{c: atomic.NewInt64(0)}
+	counter = s
 	go func() {
 		w := 1
 		t := time.NewTicker(time.Second * time.Duration(w))
@@ -32,6 +33,5 @@ func NewCounter() *Counter {
 			fmt.Println(fmt.Sprintf("%0.2fm req/sec ", float64(s.c.Swap(0))/1000000/float64(w)))
 		}
 	}()
-	counter = s
 	return s
 }
