@@ -33,7 +33,7 @@ func c(c, card int) {
 			j := 0
 			defer wg.Done()
 			for {
-				reporter.Send(`metric_name`, 1, `tag`, names[j])
+				reporter.Send(`metric_name`, randomNum(), `tag`, names[j])
 				if j == len(names)-1 {
 					j = 0
 				} else {
@@ -43,4 +43,18 @@ func c(c, card int) {
 		}()
 	}
 	wg.Wait()
+}
+
+func randomNum() float64 {
+	x := fastrand.Uint32n(100)
+	if x < 50 {
+		return 1
+	} else if x >= 50 && x < 90 {
+		return 2
+	} else if x >= 90 && x < 95 {
+		return 3
+	} else if x >= 95 && x < 99 {
+		return 4
+	}
+	return 0
 }
