@@ -87,12 +87,12 @@ func BenchmarkReporter_Send_ConcurrentWithDefaultTags(b *testing.B) {
 		}()
 	}
 	wg.Wait()
-	WithDefaultTags(`key1`, `val1`, `key2`, `val2`)
 }
 
 func TestReporter_Send(t *testing.T) {
 	stu := drivers.NewTestStub()
-	r := NewReporter(WithDriver(stu, 1))
+	defaultTags := []string{`key1`, `val1`, `key2`, `val2`}
+	r := NewReporter(WithDriver(stu, 1), WithDefaultTags(defaultTags...))
 	count := 1000
 	tagsAr := map[string][]string{}
 	for i := 0; i < count; i++ {
@@ -124,6 +124,9 @@ func TestReporter_Send(t *testing.T) {
 		}
 		if !reflect.DeepEqual(tagsAr[k], m.Tags) {
 			t.Fatalf(`expecting %v, got %v`, tagsAr[k], m.Tags)
+		}
+		if !reflect.DeepEqual(defaultTags, m.DefaultTags) {
+			t.Fatalf(`expecting %v, got %v`, defaultTags, m.DefaultTags)
 		}
 		i++
 	}

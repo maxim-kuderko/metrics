@@ -10,5 +10,6 @@ func WithDriver(d Driver, bulkSize int) Option {
 
 func WithDefaultTags(tags ...string) Option {
 	return func(r *Reporter) {
+		r.defaultTags = tags
 	}
 }

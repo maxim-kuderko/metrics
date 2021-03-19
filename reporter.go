@@ -24,7 +24,7 @@ func NewReporter(opt ...Option) *Reporter {
 func (r *Reporter) Send(name string, value float64, tags ...string) {
 	b := r.buff.Get().(*requestBuffer)
 	defer r.buff.Put(b)
-	b.add(name, value, calcHash(name, tags...), append(tags, r.defaultTags...)...)
+	b.add(name, value, calcHash(name, tags...), r.defaultTags, tags...)
 }
 
 func (r *Reporter) Close() {

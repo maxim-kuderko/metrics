@@ -28,11 +28,12 @@ func newRequestBuffer(size int, driver Driver) *requestBuffer {
 	}
 }
 
-func (rb *requestBuffer) add(name string, value float64, h uint64, tags ...string) {
+func (rb *requestBuffer) add(name string, value float64, h uint64, defaultTags []string, tags ...string) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 	rb.data.Metrics[rb.idx].Name = name
 	rb.data.Metrics[rb.idx].Tags = tags
+	rb.data.Metrics[rb.idx].DefaultTags = defaultTags
 	rb.data.Metrics[rb.idx].Values.Count = 1
 	rb.data.Metrics[rb.idx].Values.Sum = value
 	rb.data.Metrics[rb.idx].Values.Min = value
