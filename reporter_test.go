@@ -62,6 +62,32 @@ func BenchmarkReporter_Send_Concurrent(b *testing.B) {
 		}()
 	}
 	wg.Wait()
+
+}
+
+func BenchmarkReporter_Send_ConcurrentWithDefaultTags(b *testing.B) {
+	b.ReportAllocs()
+	r := NewReporter(WithDriver(drivers.NewNoop(), 1), WithDefaultTags(`key1`, `val1`, `key2`, `val2`))
+	name := `name`
+	v := 0.1
+	concurrency := 32
+	wg := sync.WaitGroup{}
+	wg.Add(concurrency)
+	tagsAr := make([][]string, 0, 1000)
+	for i := 0; i < 100; i++ {
+		tagsAr = append(tagsAr, randArr())
+	}
+	b.ResetTimer()
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < b.N/concurrency; i++ {
+				r.Send(name, v, tagsAr[i%len(tagsAr)]...)
+			}
+		}()
+	}
+	wg.Wait()
+	WithDefaultTags(`key1`, `val1`, `key2`, `val2`)
 }
 
 func TestReporter_Send(t *testing.T) {

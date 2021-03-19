@@ -7,3 +7,8 @@ func WithDriver(d Driver, bulkSize int) Option {
 		r.buff = &sync.Pool{New: func() interface{} { return newRequestBuffer(bulkSize, d) }}
 	}
 }
+
+func WithDefaultTags(tags ...string) Option {
+	return func(r *Reporter) {
+	}
+}

@@ -3,21 +3,18 @@ package metrics
 import (
 	"github.com/cespare/xxhash"
 	"github.com/valyala/bytebufferpool"
-	"go.uber.org/atomic"
 	"sync"
 )
 
 type Reporter struct {
-	buff *sync.Pool
-	lb   *atomic.Int32
+	buff        *sync.Pool
+	defaultTags []string
 }
 
 type Option func(r *Reporter)
 
 func NewReporter(opt ...Option) *Reporter {
-	m := &Reporter{
-		lb: atomic.NewInt32(0),
-	}
+	m := &Reporter{}
 	for _, o := range opt {
 		o(m)
 	}
@@ -27,7 +24,7 @@ func NewReporter(opt ...Option) *Reporter {
 func (r *Reporter) Send(name string, value float64, tags ...string) {
 	b := r.buff.Get().(*requestBuffer)
 	defer r.buff.Put(b)
-	b.add(name, value, calcHash(name, tags...), tags...)
+	b.add(name, value, calcHash(name, tags...), append(tags, r.defaultTags...)...)
 }
 
 func (r *Reporter) Close() {
